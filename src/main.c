@@ -1,17 +1,29 @@
 #include <stdio.h>
 #include "lexer.h"
+#include "parser.h"
 
 int main() {
     const char* source = "int main() { return 42; }";
+    Token tokens[100];
     int index = 0;
-    Token token;
+    int token_count = 0;
 
-    printf("Lexing: %s\n", source);
-    do {
-        token = get_next_token(source, &index);
-        printf("Token: %-15s Lexeme: '%s'\n", token_type_to_string(token.type), token.lexeme);
-        free_token(token);
-    } while (token.type != TOKEN_EOF);
+    // Lex all tokens
+    while (1) {
+        Token token = get_next_token(source, &index);
+        tokens[token_count++] = token;
+        if (token.type == TOKEN_EOF) break;
+    }
+
+    // Parse
+    ASTNode* ast = parse(tokens, token_count);
+    print_ast(ast);
+
+    // Clean up
+    for (int i = 0; i < token_count; i++) {
+        free_token(tokens[i]);
+    }
+    free_ast(ast);
 
     return 0;
 }
