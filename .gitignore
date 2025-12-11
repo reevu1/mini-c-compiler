@@ -1,0 +1,19 @@
+# Build output directory
+build/
+
+# Object files
+*.o
+
+# Executable output
+mini-c
+mini-c.exe
+
+# Temporary editor files
+*.swp
+*.tmp
+
+# VS Code settings (if you use VS Code)
+.vscode/
+
+# macOS files
+.DS_Store
