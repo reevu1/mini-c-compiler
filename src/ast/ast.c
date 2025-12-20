@@ -48,7 +48,7 @@ ASTNode *ast_binary(ASTNode *left, char op, ASTNode *right) {
 
     node->binary.left = left;
     node->binary.right = right;
-    node->binary.operator = op;
+    node->binary.op = op;
     return node;
 }
 
