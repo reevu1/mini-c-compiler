@@ -36,7 +36,7 @@ struct ASTNode {
         struct {
             ASTNode *left;
             ASTNode *right;
-            char operator;   // '+', '-', '*', '/'
+            char op;   // '+', '-', '*', '/'
         } binary;
 
         // Assignment statement
