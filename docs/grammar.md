@@ -1,28 +1,48 @@
-# Mini C Compiler - Grammar Specification
+# Grammar Specification
+
+This document describes the grammar of the supported C subset.
 
 ## Tokens
-- Keywords: int, if, else, while
-- Identifiers
-- Numbers (integer literals)
-- Symbols: = + - * / ; ( ) { }
 
-## Grammar
+- IDENT     → identifier
+- NUMBER    → integer literal
+- '+' '-' '*' '/'
+- '='
+- ';'
+- '(' ')'
 
-program       → decl* stmt*
-decl          → "int" IDENT ";"
-stmt          → assign_stmt
-              | if_stmt
-              | while_stmt
-              | block
+## Grammar (EBNF)
 
-assign_stmt   → IDENT "=" expr ";"
+statement  → IDENT '=' expression ';'
 
-if_stmt       → "if" "(" expr ")" stmt ("else" stmt)?
+expression → term { ('+' | '-') term }
 
-while_stmt    → "while" "(" expr ")" stmt
+term       → factor { ('*' | '/') factor }
 
-block         → "{" stmt* "}"
+factor     → NUMBER
+           | IDENT
+           | '(' expression ')'
 
-expr          → term (("+"|"-") term)*
-term          → factor (("*"|"/") factor)*
-factor        → NUMBER | IDENT | "(" expr ")"
+## Operator Precedence
+
+Highest precedence:
+1. '*' '/'
+2. '+' '-'
+3. '='
+
+## Associativity
+
+- '+' '-' '*' '/' are left-associative
+- '=' is right-associative (handled at statement level)
+
+## Example
+
+Input:
+
+x = 10 + 20 * 3;
+
+
+Parsed as:
+
+
+x = (10 + (20 * 3));
