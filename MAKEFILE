@@ -4,26 +4,38 @@ CFLAGS = -Wall -Wextra -g -Isrc
 SRC_DIR = src
 BUILD_DIR = build
 
-# Find all .c files recursively under src/
+# All source files
 SRCS = $(shell find $(SRC_DIR) -name "*.c")
+
+# Object files
 OBJS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRCS))
 
-TARGET = mini-c
+# Separate object groups
+COMPILER_OBJS = $(filter-out $(BUILD_DIR)/vm/%, $(OBJS))
+VM_OBJS       = $(filter $(BUILD_DIR)/vm/%, $(OBJS))
 
-all: $(TARGET)
+COMPILER_TARGET = mini-c
+VM_TARGET       = mini-vm
 
-$(TARGET): $(OBJS)
+all: $(COMPILER_TARGET) $(VM_TARGET)
+
+# Compiler binary
+$(COMPILER_TARGET): $(COMPILER_OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
-# Compile all .c files into .o files inside build/
+# VM binary
+$(VM_TARGET): $(VM_OBJS)
+	$(CC) $(CFLAGS) -o $@ $^
+
+# Compile rule
 $(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(BUILD_DIR) $(TARGET)
+	rm -rf $(BUILD_DIR) $(COMPILER_TARGET) $(VM_TARGET)
 
 run:
-	./$(TARGET)
+	./$(COMPILER_TARGET) | ./$(VM_TARGET)
 
 .PHONY: all clean run
