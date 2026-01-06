@@ -22,49 +22,22 @@ Represents numeric constants.
 Example:
 10
 
-makefile
-Copy code
-
 ### Identifier
 Represents variable names.
 Example:
 x
-
-makefile
-Copy code
 
 ### Binary Expression
 Represents arithmetic expressions.
 Example:
 a + b
 
-makefile
-Copy code
-
-Tree:
-/
-a b
-
-makefile
-Copy code
 
 ### Assignment Statement
 Represents variable assignment.
 Example:
 x = 10 + 20;
 
-makefile
-Copy code
-
-Tree:
-=
-/
-x +
-/
-10 20
-
-markdown
-Copy code
 
 ## Why AST?
 
