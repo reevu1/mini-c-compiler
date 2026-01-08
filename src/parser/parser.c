@@ -103,8 +103,6 @@ static ASTNode *parse_expr(void) {
  * stmt → IDENT '=' expr ';'
  */
 ASTNode *parse_statement(void) {
-    advance(); // load first token
-
     if (current.type != TOK_IDENT) {
         fprintf(stderr,
                 "Parser error at line %d: expected identifier\n",
@@ -122,4 +120,16 @@ ASTNode *parse_statement(void) {
     expect(TOK_SEMI);
 
     return ast_assign(name, value);
+}
+
+ASTNode *parse_program(void) {
+    advance();
+    ASTNode *block = ast_make_block();
+
+    while (current.type != TOK_EOF) {
+        ASTNode *stmt = parse_statement();
+        ast_block_add(block, stmt);
+    }
+
+    return block;
 }

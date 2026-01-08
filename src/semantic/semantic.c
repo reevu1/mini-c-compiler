@@ -45,6 +45,12 @@ static void analyze_node(ASTNode *node) {
             // always valid
             break;
 
+        case AST_BLOCK:
+            for (int i = 0; i < node->block.count; i++) {
+                analyze_node(node->block.statements[i]);
+            }
+            break;
+
         default:
             break;
     }

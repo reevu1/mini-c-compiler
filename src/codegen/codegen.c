@@ -55,6 +55,12 @@ static void gen_node(ASTNode *node) {
             printf("STORE %s\n", node->assign.identifier);
             break;
 
+        case AST_BLOCK:
+            for (int i = 0; i < node->block.count; i++) {
+                gen_node(node->block.statements[i]);
+            }
+            break;
+
         default:
             break;
     }

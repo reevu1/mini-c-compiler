@@ -8,11 +8,13 @@
  * Each value represents a different syntactic construct
  */
 typedef enum {
-    AST_INT_LITERAL,     // e.g. 10
-    AST_IDENTIFIER,      // e.g. x
-    AST_BINARY_EXPR,     // e.g. a + b
-    AST_ASSIGN_STMT      // e.g. x = expr;
+    AST_INT_LITERAL,
+    AST_IDENTIFIER,
+    AST_BINARY_EXPR,
+    AST_ASSIGN_STMT,
+    AST_BLOCK            
 } ASTKind;
+
 
 /*
  * Forward declaration
@@ -22,30 +24,30 @@ typedef struct ASTNode ASTNode;
 /*
  * AST node structure
  */
-struct ASTNode {
+typedef struct ASTNode {
     ASTKind kind;
-
     union {
-        // Integer literal
         int int_value;
-
-        // Identifier
         char *identifier;
 
-        // Binary expression
         struct {
-            ASTNode *left;
-            ASTNode *right;
-            char op;   // '+', '-', '*', '/'
+            char op;
+            struct ASTNode *left;
+            struct ASTNode *right;
         } binary;
 
-        // Assignment statement
         struct {
             char *identifier;
-            ASTNode *value;
+            struct ASTNode *value;
         } assign;
+
+        struct {
+            struct ASTNode **statements;
+            int count;
+        } block;          
     };
-};
+} ASTNode;
+
 
 /*
  * AST node constructor functions
@@ -54,5 +56,9 @@ ASTNode *ast_int_literal(int value);
 ASTNode *ast_identifier(char *name);
 ASTNode *ast_binary(ASTNode *left, char op, ASTNode *right);
 ASTNode *ast_assign(char *name, ASTNode *value);
+
+/* Block (multiple statements) */
+ASTNode *ast_make_block(void);
+void ast_block_add(ASTNode *block, ASTNode *stmt);
 
 #endif // AST_H

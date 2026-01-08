@@ -8,4 +8,7 @@
  */
 ASTNode *parse_statement(void);
 
+ASTNode *parse_program(void);
+
+
 #endif // PARSER_H

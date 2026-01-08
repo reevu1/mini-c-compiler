@@ -64,3 +64,19 @@ ASTNode *ast_assign(char *name, ASTNode *value) {
     node->assign.value = value;
     return node;
 }
+
+ASTNode *ast_make_block(void) {
+    ASTNode *node = malloc(sizeof(ASTNode));
+    node->kind = AST_BLOCK;
+    node->block.statements = NULL;
+    node->block.count = 0;
+    return node;
+}
+
+void ast_block_add(ASTNode *block, ASTNode *stmt) {
+    block->block.statements =
+        realloc(block->block.statements,
+                sizeof(ASTNode *) * (block->block.count + 1));
+    block->block.statements[block->block.count++] = stmt;
+}
+
