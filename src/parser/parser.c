@@ -1,135 +1,312 @@
-#include "parser.h"
-#include "lexer/lexer.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include "lexer/lexer.h"
+
+#define STACK_SIZE 200
 
 /*
- * Current token the parser is looking at
- */
-static Token current;
+Terminals
+*/
+typedef enum {
+    T_ID,
+    T_NUM,
+    T_PLUS,
+    T_MINUS,
+    T_STAR,
+    T_SLASH,
+    T_AND,
+    T_OR,
+    T_LPAREN,
+    T_RPAREN,
+    T_ASSIGN,
+    T_SEMI,
+    T_DOLLAR
+} Terminal;
 
 /*
- * Advance to next token
- */
-static void advance(void) {
-    current = lexer_next_token();
+Nonterminals
+*/
+typedef enum {
+    NT_S,
+    NT_E,
+    NT_EP,
+    NT_T,
+    NT_TP,
+    NT_F
+} NonTerminal;
+
+/*
+Symbol type
+*/
+typedef struct {
+    int is_terminal;
+    int value;
+} Symbol;
+
+/*
+Stack
+*/
+Symbol stack[STACK_SIZE];
+int top = -1;
+
+void push(Symbol s) {
+    stack[++top] = s;
+}
+
+Symbol pop() {
+    return stack[top--];
+}
+
+Symbol peek() {
+    return stack[top];
 }
 
 /*
- * Ensure current token is of expected type
- */
-static void expect(TokenType type) {
-    if (current.type != type) {
-        fprintf(stderr,
-                "Parser error at line %d: expected token %d, got %d\n",
-                current.line, type, current.type);
-        exit(1);
+Token to terminal mapping
+*/
+Terminal token_to_terminal(Token t) {
+
+    switch(t.type) {
+
+        case TOK_IDENT: return T_ID;
+        case TOK_NUMBER: return T_NUM;
+        case TOK_PLUS: return T_PLUS;
+        case TOK_MINUS: return T_MINUS;
+        case TOK_STAR: return T_STAR;
+        case TOK_SLASH: return T_SLASH;
+        case TOK_AND: return T_AND;
+        case TOK_OR: return T_OR;
+        case TOK_LPAREN: return T_LPAREN;
+        case TOK_RPAREN: return T_RPAREN;
+        case TOK_ASSIGN: return T_ASSIGN;
+        case TOK_SEMI: return T_SEMI;
+        case TOK_EOF: return T_DOLLAR;
+
+        default:
+            printf("Unknown token\n");
+            exit(1);
     }
-    advance();
 }
 
 /*
- * Forward declarations (because of recursion)
- */
-static ASTNode *parse_expr(void);
-static ASTNode *parse_term(void);
-static ASTNode *parse_factor(void);
+Push RHS in reverse
+*/
+void push_production(Symbol *rhs, int len) {
 
-/*
- * factor → NUMBER | IDENT | '(' expr ')'
- */
-static ASTNode *parse_factor(void) {
-    ASTNode *node = NULL;
-
-    if (current.type == TOK_NUMBER) {
-        int value = atoi(current.lexeme);
-        node = ast_int_literal(value);
-        advance();
-        return node;
-    }
-
-    if (current.type == TOK_IDENT) {
-        node = ast_identifier(current.lexeme);
-        advance();
-        return node;
-    }
-
-    if (current.type == TOK_LPAREN) {
-        advance();                 // consume '('
-        node = parse_expr();
-        expect(TOK_RPAREN);        // consume ')'
-        return node;
-    }
-
-    fprintf(stderr,
-            "Parser error at line %d: unexpected token '%s'\n",
-            current.line, current.lexeme);
-    exit(1);
+    for(int i=len-1;i>=0;i--)
+        push(rhs[i]);
 }
 
 /*
- * term → factor ((* | /) factor)*
- */
-static ASTNode *parse_term(void) {
-    ASTNode *node = parse_factor();
+LL(1) table lookup
+*/
 
-    while (current.type == TOK_STAR || current.type == TOK_SLASH) {
-        char op = current.lexeme[0];
-        advance();
-        ASTNode *right = parse_factor();
-        node = ast_binary(node, op, right);
+void apply_rule(NonTerminal nt, Terminal t) {
+
+    Symbol rhs[5];
+    int len = 0;
+
+    switch(nt) {
+
+    case NT_S:
+
+        if(t==T_ID) {
+
+            printf("S -> id = E ;\n");
+
+            rhs[len++] = (Symbol){1,T_SEMI};
+            rhs[len++] = (Symbol){0,NT_E};
+            rhs[len++] = (Symbol){1,T_ASSIGN};
+            rhs[len++] = (Symbol){1,T_ID};
+
+            push_production(rhs,len);
+        }
+        break;
+
+    case NT_E:
+
+        if(t==T_ID || t==T_NUM || t==T_LPAREN) {
+
+            printf("E -> T E'\n");
+
+            rhs[len++] = (Symbol){0,NT_EP};
+            rhs[len++] = (Symbol){0,NT_T};
+
+            push_production(rhs,len);
+        }
+        break;
+
+    case NT_EP:
+
+        if(t==T_PLUS) {
+
+            printf("E' -> + T E'\n");
+
+            rhs[len++] = (Symbol){0,NT_EP};
+            rhs[len++] = (Symbol){0,NT_T};
+            rhs[len++] = (Symbol){1,T_PLUS};
+
+            push_production(rhs,len);
+        }
+
+        else if(t==T_MINUS) {
+
+            printf("E' -> - T E'\n");
+
+            rhs[len++] = (Symbol){0,NT_EP};
+            rhs[len++] = (Symbol){0,NT_T};
+            rhs[len++] = (Symbol){1,T_MINUS};
+
+            push_production(rhs,len);
+        }
+
+        else if(t==T_OR) {
+
+            printf("E' -> || T E'\n");
+
+            rhs[len++] = (Symbol){0,NT_EP};
+            rhs[len++] = (Symbol){0,NT_T};
+            rhs[len++] = (Symbol){1,T_OR};
+
+            push_production(rhs,len);
+        }
+
+        else {
+
+            printf("E' -> ε\n");
+        }
+
+        break;
+
+    case NT_T:
+
+        if(t==T_ID || t==T_NUM || t==T_LPAREN) {
+
+            printf("T -> F T'\n");
+
+            rhs[len++] = (Symbol){0,NT_TP};
+            rhs[len++] = (Symbol){0,NT_F};
+
+            push_production(rhs,len);
+        }
+
+        break;
+
+    case NT_TP:
+
+        if(t==T_STAR) {
+
+            printf("T' -> * F T'\n");
+
+            rhs[len++] = (Symbol){0,NT_TP};
+            rhs[len++] = (Symbol){0,NT_F};
+            rhs[len++] = (Symbol){1,T_STAR};
+
+            push_production(rhs,len);
+        }
+
+        else if(t==T_SLASH) {
+
+            printf("T' -> / F T'\n");
+
+            rhs[len++] = (Symbol){0,NT_TP};
+            rhs[len++] = (Symbol){0,NT_F};
+            rhs[len++] = (Symbol){1,T_SLASH};
+
+            push_production(rhs,len);
+        }
+
+        else if(t==T_AND) {
+
+            printf("T' -> && F T'\n");
+
+            rhs[len++] = (Symbol){0,NT_TP};
+            rhs[len++] = (Symbol){0,NT_F};
+            rhs[len++] = (Symbol){1,T_AND};
+
+            push_production(rhs,len);
+        }
+
+        else {
+
+            printf("T' -> ε\n");
+        }
+
+        break;
+
+    case NT_F:
+
+        if(t==T_ID) {
+
+            printf("F -> id\n");
+
+            rhs[len++] = (Symbol){1,T_ID};
+            push_production(rhs,len);
+        }
+
+        else if(t==T_NUM) {
+
+            printf("F -> num\n");
+
+            rhs[len++] = (Symbol){1,T_NUM};
+            push_production(rhs,len);
+        }
+
+        else if(t==T_LPAREN) {
+
+            printf("F -> ( E )\n");
+
+            rhs[len++] = (Symbol){1,T_RPAREN};
+            rhs[len++] = (Symbol){0,NT_E};
+            rhs[len++] = (Symbol){1,T_LPAREN};
+
+            push_production(rhs,len);
+        }
+
+        break;
     }
-
-    return node;
 }
 
 /*
- * expr → term ((+ | -) term)*
- */
-static ASTNode *parse_expr(void) {
-    ASTNode *node = parse_term();
+Predictive parser
+*/
 
-    while (current.type == TOK_PLUS || current.type == TOK_MINUS) {
-        char op = current.lexeme[0];
-        advance();
-        ASTNode *right = parse_term();
-        node = ast_binary(node, op, right);
+void parse() {
+
+    Token token = lexer_next_token();
+
+    push((Symbol){1,T_DOLLAR});
+    push((Symbol){0,NT_S});
+
+    while(top>=0) {
+
+        Symbol X = peek();
+        Terminal a = token_to_terminal(token);
+
+        printf("Token: %s\n", token.lexeme);
+
+        if(X.is_terminal) {
+
+            if(X.value == a) {
+
+                pop();
+                token = lexer_next_token();
+            }
+
+            else {
+
+                printf("Error: token mismatch\n");
+                token = lexer_next_token();
+            }
+        }
+
+        else {
+
+            pop();
+            apply_rule(X.value, a);
+        }
     }
 
-    return node;
-}
-
-/*
- * stmt → IDENT '=' expr ';'
- */
-ASTNode *parse_statement(void) {
-    if (current.type != TOK_IDENT) {
-        fprintf(stderr,
-                "Parser error at line %d: expected identifier\n",
-                current.line);
-        exit(1);
-    }
-
-    char *name = current.lexeme;
-    advance();
-
-    expect(TOK_ASSIGN);
-
-    ASTNode *value = parse_expr();
-
-    expect(TOK_SEMI);
-
-    return ast_assign(name, value);
-}
-
-ASTNode *parse_program(void) {
-    advance();
-    ASTNode *block = ast_make_block();
-
-    while (current.type != TOK_EOF) {
-        ASTNode *stmt = parse_statement();
-        ast_block_add(block, stmt);
-    }
-
-    return block;
+    printf("Parsing finished\n");
 }
